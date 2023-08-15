@@ -1,0 +1,455 @@
+---
+title: "PROG8430-23W-Assign04-MLR"
+author: "Maulik Patel"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#This sets the working directory
+knitr::opts_knit$set(root.dir = setwd("C:/Users/mauli/OneDrive/Documents/BDSA/R/Assignment 4"))
+
+```
+This section is for the basic set up.
+It clears all the plots, the console and the workspace.
+It also sets the overall format for numbers.
+
+```{r}
+if(!is.null(dev.list())) dev.off()
+#cat("\014") 
+rm(list=ls())
+options(scipen=12)
+```
+This section loads and attaches all the necessary packages.
+```{r}
+if(!require(pastecs)){install.packages("pastecs")}
+library("pastecs")
+
+if(!require(lattice)){install.packages("lattice")}
+library("lattice")
+
+if(!require(readxl)){install.packages("readxl")}
+library("readxl")
+
+if(!require(ggplot2)){install.packages("ggplot2")}
+library("ggplot2")
+
+if(!require(tinytex)){install.packages("tinytex")}
+library("tinytex")
+
+if(!require(corrgram)){install.packages("corrgram")}
+library("corrgram")
+
+```
+
+```{r}
+
+# reading the Dataset
+df_MP <- read.table("PROG8430_Assign04_23W.txt", header = TRUE, sep = ",")
+
+#transforming it into a Data frame
+df_MP <- as.data.frame(df_MP)
+head(df_MP)
+
+#to check the datatype we used class() function
+class(df_MP)
+
+```
+1. Rename all variables with your initials appended 
+   (just as was done in assignment 1,2 and 3)
+```{r}
+
+#Renaming all variables in table with my name initials
+colnames(df_MP) <- c("DL_MP", "VN_MP", "PG_MP", "CS_MP", 
+                     "ML_MP", "DM_MP", "HZ_MP", "CR_MP", "WT_MP")
+
+#after printing the data frame we can see that the names                                                                          of the columns are updated with my initials
+head(df_MP)
+
+
+```
+```{r}
+
+df_MP <- as.data.frame(unclass(df_MP), stringsAsFactors = TRUE)
+
+#transforming character variables into factor variables using as.factor() function
+
+#df_MP$DM_MP <- as.factor(df_MP$DM_MP)
+#df_MP$HZ_MP <- as.factor(df_MP$HZ_MP)
+#df_MP$CR_MP <- as.factor(df_MP$CR_MP)
+
+#we will verify it using class() function here
+class(df_MP$DM_MP)
+class(df_MP$HZ_MP)
+class(df_MP$CR_MP)
+
+```
+
+```{r}
+
+#using summary() function we can have the overall summary of the data like min,                                                   median, max and so on.
+#using this we can clearly see that there are no NA's or Null values in the data.
+summary(df_MP)
+
+```
+
+```{r}
+
+#stat.desc() function gives us the descriptive statistical analysis of our dataframe
+#Cloumns DM_MP, HZ_MP, CR_MP are factor variables so it will return NA's                                                         when we use stat.desc() function
+
+stat.desc(df_MP)
+
+
+```
+#We can see that there is no variable with the least variance so we are not going                                                 to remove any variable
+```{r}
+
+#Finding Outliers from the data
+#using the loop it will only print box plots for the variables with numeric                                                        values only
+
+par(mfrow=c(3,2))
+
+
+for (i in 1:ncol(df_MP)) {
+  if (is.numeric(df_MP[,i])) {
+    boxplot(df_MP[,i], main=names(df_MP)[i],xlab="", horizontal=TRUE)
+  }
+}
+
+par(mfrow=c(1,1))
+
+```
+
+```{r}
+
+densityplot( ~ df_MP$DL_MP, 
+             pch=4, 
+             main='Density plot for DL', 
+             xlab='Time for delivery in days, rounded to nearest 10th')
+
+densityplot( ~ df_MP$VN_MP, 
+             pch=4, 
+             main='Density plot for VN', 
+             xlab='Vintage of product, how long it has been in the warehouse')
+
+densityplot( ~ df_MP$PG_MP, 
+             pch=4, 
+             main='Density plot for PG', 
+             xlab='How many packages of product have been ordered')
+
+densityplot( ~ df_MP$CS_MP, 
+             pch=4, 
+             main='Density plot for CS', 
+             xlab='How many orders the customer has made in the past')
+
+densityplot( ~ df_MP$ML_MP, 
+             pch=4, 
+             main='Density plot for ML', 
+             xlab='Distance the order needs to be delivered in km')
+
+densityplot( ~ df_MP$WT_MP, 
+             pch=4, 
+             main='Density plot for WT', 
+             xlab='Weight of the shipment in decagrams')
+
+
+
+
+```
+```{r}
+
+#PG shows How many packages of product have been ordered so in the density plot                                                   we can see a reading below 0 but packages delivered cannot be less than zero.                                                     so we will remove that reading.
+
+PG_MP <- which(df_MP$PG_MP < 0)
+df_MP <- df_MP[-c(PG_MP),]
+
+densityplot( ~ df_MP$PG_MP, 
+             pch=4, 
+             xlab="Reconnections Made", 
+             main="Outliers Removed from PG(How many packages of product have been ordered)")
+
+```
+
+
+```{r}
+
+
+#Checking for correlations in the data
+corrgram(df_MP, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt,
+         main="Correlations")
+
+corr_MP <- df_MP[-c(6,7,8)]
+
+head(corr_MP)
+
+round(cor(corr_MP, method="spearman"), 2)
+
+#Looking at the correlations matrix, variables DL_MP and PG_MP have a correlation                                        coefficient of 0.46, which is not very high. Therefore, it is not necessary to                                                remove one of these columns
+
+```
+
+
+
+#To determine if there is any evidence if one Carrier has faster delivery times                                                   than the other we will perform the hypothesis test, we can use a two-sample                                                     t-test, assuming that the delivery times for each carrier are normally distributed                                               and have equal variances. 
+
+#The t-test will compare the means of the two samples and determine                                                               if the difference is statistically significant.
+
+#H0(Null): There is no difference in delivery times between the two carriers.
+#H1(Alernative): One carrier has faster delivery times than the other.
+
+
+```{r}
+#shows average time
+avg_MP <- aggregate (df_MP$DL_MP, by=list(df_MP$CR_MP), FUN=mean)
+colnames(avg_MP) <- c("Delivery_Carrier_MP", "Average_time_MP")
+print(avg_MP)
+
+
+```
+
+```{r}
+
+# two-sample t-test for delivery carriers
+#t_test <- t.test(def_post_MP, sup_del_MP, var.equal = TRUE)
+t_test <- t.test(df_MP$DL_MP ~ df_MP$CR_MP)
+
+# View the results of the t-test
+t_test
+
+#Since the p-value is less than 0.05, we reject the null hypothesis and conclude                                               that there is a significant difference in the mean DL_MP values between                                                         the def_post and sup_del groups.                                                                                               Therefore, we would choose the alternative hypothesis, which is that                                                            the true difference in means is not equal to zero.
+
+```
+
+
+```{r, echo=FALSE}
+
+# Choose sampling rate as 0.8 because we want 80/20 split
+sr <- 0.8
+
+# Finding the number of rows of data so we can divide accordingly
+n.row <- nrow(df_MP)
+
+#Choose the rows for the traning  the sample 
+
+set.seed(8369)
+training.rows <- sample(1:n.row, sr*n.row, replace=FALSE)
+
+#Assign a part of data to the training sample
+
+train <- subset(df_MP[training.rows,])
+
+# Assign the rest to the data to Test Sample
+
+test <- subset(df_MP[-c(training.rows),])
+
+summary(df_MP)
+summary(test)
+summary(train)
+
+
+
+```
+
+
+Simple Linear Regression 8
+
+1. Correlations: Create both numeric and graphical correlations (as
+demonstrated in class) and comment on noteworthy correlations you
+observe. Are these surprising? Do they make sense?
+
+```{r}
+
+
+corrgram(df_MP, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt,
+         main="Correlations")
+
+corr_MP <- df_MP[-c(6,7,8)]
+
+round(cor(corr_MP, method="spearman"), 2)
+
+#No the data is perfectly fine no surprising data is found from corrgram                                                        and numeric data.
+
+
+```
+
+
+Create a simple linear regression model using time for delivery as the
+dependent variable and weight of the shipment as the independent. Create a
+scatter plot of the two variables and overlay the regression line.
+
+
+```{r}
+
+# linear regression model
+Linear_MP <- lm(DL_MP ~ WT_MP, train)
+Linear_MP
+
+# plot the scatter plot with regression line
+plot(train$WT_MP, train$DL_MP, main = "Delivery Time vs. Weight", 
+     xlab = "Weight (kg)", ylab = "Time (days)")
+abline(Linear_MP, col = "darkorchid1")
+
+
+
+
+```
+
+3. Create a simple linear regression model using time for delivery as the
+dependent variable and distance the shipment needs to travel as the
+independent. Create a scatter plot of the two variables and overlay the
+regression line.
+
+```{r}
+
+# fit linear regression model
+Linear2_MP <- lm(DL_MP ~ ML_MP, train)
+Linear2_MP
+
+# plot the scatter plot with regression line
+plot(train$ML_MP, train$DL_MP, main = "Delivery Time vs. Distnce", 
+     xlab = "Distance", ylab = "Time")
+abline(Linear2_MP, col = "darkorchid1")
+
+
+
+```
+
+
+4. As demonstrated in class, compare the models (F-Stat, 𝑅2
+, RMSE for train and test, etc.) Which model is superior? Why?
+
+
+```{r}
+
+
+summary(Linear_MP)
+summary(Linear2_MP)
+corrgram(train, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt,
+         main="Correlations")
+
+
+```
+#both the models are symmetrical as we can see Residuals are around zero
+
+#Value of F-test for both the models pass the hypothesis test as both the                                                    models have p-value less than 0.05
+
+#T-test also passes the null hypothesis for both the models.
+
+#Adjusted R-squared value for model one is more than the model two
+
+#after reading the corrgram correlation between WT_MP and DL_MP is negative and                                                 for ML_MP and DL_MP there is a positive correlation observed.
+
+#After comparing F-test, T-test, Residuals, Adjusted R-squared, Intercept and                                           coefficients we conclude that Model1(Linear_MP) is better than Model2(Linear2_MP)
+
+
+Model Development – Multivariate 6
+
+As demonstrated in class, create two models, one using all the variables and
+the other using backward selection. This should be built using the train set
+created in Step 2. For each model interpret and comment on the main
+measures we discussed in class (including RMSE for train and test). 
+(Your commentary should be yours, not simply copied from my example).
+
+```{r}
+
+
+# Baseline Model
+# (.) here depicts each and every variable in the code
+
+wholemodel_MP = lm(DL_MP ~ . ,
+            data=train, na.action=na.omit)
+
+
+summary(wholemodel_MP)
+
+pdt_MP <- predict(wholemodel_MP, newdata=train)
+
+RMSE_trn_whole_MP <- sqrt(mean((train$DL_MP - pdt_MP)^2))
+round(RMSE_trn_whole_MP,2)
+```
+#This model is Symmetric as we can see it has Residual value around zero
+
+#F-test is also passed by this model as P-value is less than 0.05
+
+#T-test is passed by 6 variables out of 8.
+
+#Adujusted R-squared value is 0.467 for this model
+
+#The multiple R-squared value indicates the proportion of the variation in the dependent variable by the independent variables in a linear regression model.
+
+#In this case, the multiple R-squared value of 0.4869 indicates that approximately 49% of the variance in the dependent variable can be explained by the independent variables in the model. 
+
+#This means that the remaining of the variance in the dependent variable is not explained by the independent variables and may be due to other factors.
+
+#Overall, the multiple R-squared value is a useful for checking the goodness of fit of a linear regression model and for comparing different models to determine which one provides the best fit.
+
+```{r}
+
+#Backward Selection Model    
+
+revmodel_MP = step(wholemodel_MP, direction="backward", details=TRUE)
+
+summary(revmodel_MP)
+
+pdt_MP <- predict(revmodel_MP, newdata=train)
+
+RMSE_trn_rev_MP <- sqrt(mean((train$DL_MP - pdt_MP)^2))
+round(RMSE_trn_rev_MP,2)
+
+
+```
+# the residual standard error is 1.23, meaning that the average difference between the predicted values and the actual values is 1.23 units.
+
+#This model is Symmetric as we can see it has Residual value around zero
+
+#F-test is also passed by this model as P-value is less than 0.05
+
+#T-test is passed by 5 variables out of 6.
+
+#Adujusted R-squared value is 0.447 for this model
+
+#In conclusion full model is better than Backward model
+
+
+Model Evaluation – Verifying Assumptions - Multivariate 4
+For both models created in Step 4, evaluate the main assumptions of
+regression (for example, Error terms mean of zero, constant variance and
+normally distributed, etc.)
+```{r}
+
+
+par(mfrow = c(2, 2))  
+plot(wholemodel_MP)  
+par(mfrow = c(1, 1))  
+
+
+```
+
+```{r}
+
+par(mfrow = c(2, 2))  
+plot(revmodel_MP)  
+par(mfrow = c(1, 1))
+
+
+```
+
+
+```{r}
+
+#Check Normality Numerically
+
+shapiro.test(wholemodel_MP)
+shapiro.test(revmodel_MP)
+
+
+```

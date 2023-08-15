@@ -1,0 +1,397 @@
+---
+title: "PROG8430-23W-Assign03"
+author: "Maulik Patel"
+date: "2023-02-18"
+output: pdf_document
+---
+
+Set the work directory. 
+This MUST be done for every submission
+This will determine the default location of all of your data.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#This sets the working directory
+knitr::opts_knit$set(root.dir = 'C:/Users/mauli/OneDrive/Documents/BDSA/R/Assignment 3')
+
+```
+
+This section is for the basic set up.
+It will clear all the plots, the console and the workspace.
+It also sets the overall format for numbers.
+
+```{r}
+if(!is.null(dev.list())) dev.off()
+cat("\014") 
+rm(list=ls())
+options(scipen=9)
+```
+This section loads and attaches all the necessary packages.
+
+```{r}
+#Load packages
+#For Excel
+if(!require(pastecs)){install.packages("pastecs")}
+library("pastecs")
+
+if(!require(lattice)){install.packages("lattice")}
+library("lattice")
+
+if(!require(readxl)){install.packages("readxl")}
+library("readxl")
+
+if(!require(ggplot2)){install.packages("ggplot2")}
+library("ggplot2")
+
+if(!require(tinytex)){install.packages("tinytex")}
+library("tinytex")
+```
+
+1 Data Transformation
+  1. Rename all variables with your initials appended (just as was done in
+     assignment 1)
+    
+    ```{r}
+
+#reading the file
+fcb_MP <- read.table(file = "PROG8430-23W-Assign03.txt", header=TRUE, sep=",")
+
+#transforming it into a Data frame
+fcb_MP <- as.data.frame(fcb_MP)
+head(fcb_MP)
+
+#to check the datatype we used class() function
+class(fcb_MP)
+
+```
+
+```{r}
+
+#Renaming all variables in table with my name initials
+colnames(fcb_MP) <- c("Food_MP", "Enter_MP", "Edu_MP", "Trans_MP", 
+                     "Work_MP", "House_MP", "Oth_MP")
+
+#after printing the data frame we can see that the names of the columns are updated with my initials
+print(head(fcb_MP))
+
+
+#using dim() function to get the dimensions of the data frame
+dim(fcb_MP)
+#we can see that there are 1059 rows and 7 columns in the data frame
+```
+Descriptive Data Analysis
+  1. Create graphical summaries of the data (as demonstrated in class:
+     boxplots, histograms or density plots) and comment on any
+     observations you make.
+```{r}
+
+densityplot(~fcb_MP$Food_MP, xlab = "Food", main="Density plot of of % income spent on Food")
+densityplot(~fcb_MP$House_MP, xlab = "House", main="Density plot of % income spent on House")
+densityplot(~fcb_MP$Work_MP, xlab = "Work", main="Density plot of % income spent on Work")
+densityplot(~fcb_MP$Edu_MP, xlab = "Education", main="Density plot of % income spent on Education")
+densityplot(~fcb_MP$Trans_MP, xlab = "Transportation", main="Density plot of % income spent on Transportation")
+densityplot(~fcb_MP$Oth_MP, xlab = "Others", main="Density plot of % income spent on Others")
+densityplot(~fcb_MP$Enter_MP, xlab = "Others", main="Density plot of % income spent on Entertainment")
+
+```
+#densityplots of all the variables depict that the data is not normally distributed but we can see outliers only in two variables from the set of seven variables
+
+
+Exploring the Data
+```{r}
+
+par(mfrow=c(2,2))
+for (i in 1:ncol(fcb_MP)) {
+  if (is.numeric(fcb_MP[,i])) {
+      boxplot(fcb_MP[i], main=names(fcb_MP)[i],
+              horizontal=TRUE, pch=10)
+  }
+}
+
+par(mfrow=c(1,1))
+
+```
+2. Standardize all of the variables using either of the two functions
+     demonstrated in class. Describe why you chose the method you did.
+
+#we will prefer this method because the data here contains very negligible set outliers which doesn't affect this formula     
+```{r}
+
+Normal_MP <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+
+fcb_MP$Food_norm_MP <- Normal_MP(fcb_MP$Food_MP)
+
+fcb_MP$Work_norm_MP <- Normal_MP(fcb_MP$Work_MP)
+
+fcb_MP$Enter_norm_MP <- Normal_MP(fcb_MP$Enter_MP)
+
+fcb_MP$Edu_norm_MP <- Normal_MP(fcb_MP$Edu_MP)
+
+fcb_MP$Trans_norm_MP <- Normal_MP(fcb_MP$Trans_MP)
+
+fcb_MP$House_norm_MP <- Normal_MP(fcb_MP$House_MP)
+
+fcb_MP$Oth_norm_MP <- Normal_MP(fcb_MP$Oth_MP)
+
+head(fcb_MP)
+
+```
+Clustering
+  
+  Using the K-Means procedure as demonstrated in class, create
+  clusters with k=2,3,4,5,6,7.
+  You will be using only two variables as your centroids (House and
+  Food)
+  1. Create segmentation/cluster schemes for k=2,3,4,5,6,7.
+```{r}
+
+#creating clusters 
+#initializing using cluster_MP with 7
+cluster_MP <- 7
+mc_MP <- c(2:cluster_MP)
+mss_MP <- rep(0,cluster_MP-1)
+
+```
+  2. Create the WSS plots as demonstrated in class and select a
+     suitable k value based on the “elbow”. [NOTE – Use the code
+     that I provided to do this. Using other functions will yield
+     different results.]
+     
+#creating for all values of k and observing that the values of K changing each time
+```{r}
+
+#for k=2
+k=2
+
+#we used columns food and house that are 8 and 13
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+Clstr_MP
+
+#creating cluster column
+fcb_MP$cluster <- factor(Clstr_MP$cluster)
+head(fcb_MP)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+```
+```{r}
+
+#for k=3
+k=3
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+Clstr_MP
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)
+head(fcb_MP)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+```
+
+```{r}
+#for k=4
+k=4
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+Clstr_MP
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)
+head(fcb_MP)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+```
+```{r}
+#for k=5
+k=5
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+Clstr_MP
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)   # Adding Cluster tags to variables
+head(fcb_MP)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+```
+
+```{r}
+
+#for k=6
+k=6
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+Clstr_MP
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)
+head(fcb_MP)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+```
+
+```{r}
+#for k=7
+k=7
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+Clstr_MP
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)
+head(fcb_MP)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+```
+
+
+
+```{r}
+#creating Elbow chart for clusters above to observe the bend
+
+plot(2:cluster_MP, mss_MP,
+     type="b", pch = 19, frame = FALSE,
+     main="Elbow Chart for Clusters",
+     xlab="Values of K",
+     ylab="Total Within-Clusters SS",
+     ylim=c(0,max(mss_MP)))
+
+
+```
+Evaluation of Clusters
+  1. Based on the “k” chosen above, create a scatter plot showing the
+     clusters and colour-coded datapoints for each of “k-1”, “k”, “k+1”. For
+     example, if you think the “elbow” is at k=4 create the charts for k=3,
+     k=4 and k=5.
+
+#scatterplots for k-1, k, k+1
+#we have choosen k=3 from the elbow chart as we can see it bending at k=3
+```{r}
+#scatter plot for k-1: 3-1=2
+k=2
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+Clstr_MP
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)   # Adding Cluster tags to variables
+head(fcb_MP)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+plot(fcb_MP$Food_norm_MP, fcb_MP$House_norm_MP,
+     col=fcb_MP$cluster, pch=as.numeric(fcb_MP$cluster), xlab='Food', ylab='House', main = "Scatterplot for K=2")
+points(centers$Food_norm_MP, centers$House_norm_MP,
+       col=centers$cluster, pch=as.numeric(centers$cluster),
+       cex=5, lwd=3, xlab='Food', ylab='House')
+```
+```{r}
+#scatter plot for k: 3
+k=3
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)   # Adding Cluster tags to variables
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+plot(fcb_MP$Food_norm_MP, fcb_MP$House_norm_MP,
+     col=fcb_MP$cluster, pch=as.numeric(fcb_MP$cluster),xlab='Food', ylab='House', main = "Scatterplot for K=3")
+points(centers$Food_norm_MP, centers$House_norm_MP,
+       col=centers$cluster, pch=as.numeric(centers$cluster),
+       cex=5, lwd=3)
+```
+
+```{r}
+
+#scatter plot for k+1: 3+1=4
+k=4
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+plot(fcb_MP$Food_norm_MP, fcb_MP$House_norm_MP,
+     col=fcb_MP$cluster, pch=as.numeric(fcb_MP$cluster),xlab='Food', ylab='House', main = "Scatterplot for K=4")
+points(centers$Food_norm_MP, centers$House_norm_MP,
+       col=centers$cluster, pch=as.numeric(centers$cluster),
+       cex=5, lwd=3)
+```
+2. Based on the WSS plot (3.2) and the charts (4.1) choose one set of
+   clusters that best describes the data.
+
+#In the scatter plot, we can see that k=3 separates the data into three distinct clusters, with one cluster having low values for both Food and House spending, another cluster having moderate values for both, and a third cluster having high values for both.
+
+#On the other hand, k=4 divides the data into four clusters, with two clusters having low values for both Food and House spending, another cluster having moderate values for both, and a fourth cluster having high values for Food and low values for House.
+
+#If we want to focus on the overall spending pattern of the households and are interested in identifying households with high expenditure on both Food and House, then k=3 may be a better choice as it separates out a distinct cluster with high values for both. However, if we want to identify households with high Food expenditure but low House expenditure, then k=4 may be a better choice as it separates out a distinct cluster with these characteristics.
+
+#Ultimately, I would prefer the cluster with k value 3.
+
+
+3. Create summary tables for the segmentation/clustering scheme
+   (selected in step 4.2).
+```{r}
+
+#scatter plot for k+1: 3+1=4
+k=3
+
+Clstr_MP <- kmeans(fcb_MP[,c(8,13)], iter.max=10, centers=k, nstart=10)
+
+fcb_MP$cluster <- factor(Clstr_MP$cluster)
+
+centers <- data.frame(cluster=factor(1:k), Clstr_MP$centers)
+
+mss_MP[k-1] <- Clstr_MP$tot.withinss
+
+summariseClst_MP <- aggregate(cbind(Food_MP, House_MP, Enter_MP, Work_MP, Edu_MP, Trans_MP, Oth_MP) ~ cluster, fcb_MP, FUN=mean)
+summariseClst_MP
+
+```
+
+4. Create suitable descriptive names for each cluster.
+
+#Cluster 1: BookWorms
+#Cluster 2: Newyork
+#Cluster 3: UrbanOwners
+
+```{r}
+
+cnames_MP <- c("BookWorms", "NewYork", "UrbanOwners")
+summariseClst_MP$cluster <- cnames_MP
+head(summariseClst_MP)
+
+```
+
+5. Suggest possible uses for this clustering scheme. 
+
+#Pricing of insurance: Insurance providers can range their pricing strategies to each group in order to lower their exposure to underwriting risk and boost profitability.
+
+#Pricing optimization: Based on each group's ability to pay, businesses can tailor their pricing strategies.
+
+#Optimization of store layout: By grouping products that each cluster is more likely to purchase, businesses can use the clustering method to optimise the layout of their stores.
+
+#Real estate: Real estate brokers can identify potential purchasers looking for upscale communities and residences using this clustering scheme and then assist in matching them with appropriate properties.

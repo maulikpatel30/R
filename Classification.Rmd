@@ -1,0 +1,691 @@
+---
+title: "PROG8430-Assign05-23W"
+author: "Maulik Patel"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#This sets the working directory
+knitr::opts_knit$set(root.dir = setwd("C:/Users/mauli/OneDrive/Documents/BDSA/R/Assignment 5"))
+
+```
+
+This section is for the basic set up. It clears all the plots, the
+console and the workspace. It also sets the overall format for numbers.
+
+```{r}
+if(!is.null(dev.list())) dev.off()
+#cat("\014") 
+rm(list=ls())
+options(scipen=12)
+```
+
+This section loads and attaches all the necessary packages.
+
+```{r}
+#Load packages
+#For Excel
+if(!require(tinytex)){install.packages("tinytex")}
+library("tinytex")
+
+if(!require(pastecs)){install.packages("pastecs")}
+library("pastecs")
+
+if(!require(lattice)){install.packages("lattice")}
+library("lattice")
+
+if(!require(vcd)){install.packages("vcd")}
+library("vcd")
+
+if(!require(HSAUR)){install.packages("HSAUR")}
+library("HSAUR")
+
+if(!require(rmarkdown)){install.packages("rmarkdown")}
+library("rmarkdown")
+
+if(!require(ggplot2)){install.packages("ggplot2")}
+library("ggplot2")
+
+if(!require(polycor)){install.packages("polycor")}
+library("polycor")
+
+
+if(!require(klaR)){install.packages("klaR")}
+library("klaR")
+
+if(!require(MASS)){install.packages("MASS")}
+library("MASS")
+
+if(!require(partykit)){install.packages("partykit")}
+library("partykit")
+
+if(!require(nnet)){install.packages("nnet")}
+library("nnet")
+
+```
+
+```{r}
+
+# reading the Dataset
+df_MP <- read.table("PROG8430_Assign04_23W.txt", header = TRUE, sep = ",")
+
+#transforming it into a Data frame
+df_MP <- as.data.frame(df_MP)
+head(df_MP)
+
+#to check the datatype we used class() function
+class(df_MP)
+
+```
+
+1.  Rename all variables with your initials appended (just as was done
+    in assignment 1,2 and 3)
+
+```{r}
+
+#Renaming all variables in table with my name initials
+colnames(df_MP) <- c("DL_MP", "VN_MP", "PG_MP", "CS_MP", 
+                     "ML_MP", "DM_MP", "HZ_MP", "CR_MP", "WT_MP")
+
+#after printing the data frame we can see that the names                                                                          of the columns are updated with my initials
+head(df_MP)
+
+
+```
+
+```{r}
+
+df_MP <- as.data.frame(unclass(df_MP), stringsAsFactors = TRUE)
+
+#transforming character variables into factor variables using as.factor() function
+
+#we will verify it using class() function here
+class(df_MP$DM_MP)
+class(df_MP$HZ_MP)
+class(df_MP$CR_MP)
+
+```
+
+```{r}
+
+#using summary() function we can have the overall summary of the data like min,                                                   median, max and so on.
+#using this we can clearly see that there are no NA's or Null values in the data.
+summary(df_MP)
+
+```
+
+```{r}
+
+#stat.desc() function gives us the descriptive statistical analysis of our dataframe
+#Cloumns DM_MP, HZ_MP, CR_MP are factor variables so it will return NA's                                                         when we use stat.desc() function
+
+stat.desc(df_MP)
+
+
+```
+
+```{r}
+
+df_MP$OT_MP <- as.factor(ifelse(df_MP$DL_MP <= 8.5, 1,0))
+df_MP$DL_MP <- NULL
+head(df_MP)
+
+```
+
+```{r}
+
+#Finding Outliers from the data
+#using the loop it will only print box plots for the variables with numeric                                                        values only
+
+par(mfrow=c(3,2))
+
+
+for (i in 1:ncol(df_MP)) {
+  if (is.numeric(df_MP[,i])) {
+    boxplot(df_MP[,i], main=names(df_MP)[i],xlab="", horizontal=TRUE)
+  }
+}
+
+par(mfrow=c(1,1))
+
+```
+
+```{r}
+
+#PG shows How many packages of product have been ordered so in the density plot                                                   we can see a reading below 0 but packages delivered cannot be less than zero.                                                     so we will remove that reading.
+
+PG_MP <- which(df_MP$PG_MP < 0)
+df_MP <- df_MP[-c(PG_MP),]
+
+densityplot( ~ df_MP$PG_MP, 
+             pch=4, 
+             xlab="How many packages of product have been ordered", 
+             main="Outliers Removed from PG")
+
+```
+
+
+```{r}
+# Choose sampling rate as 0.8 because we want 80/20 split
+sr <- 0.8
+
+# Finding the number of rows of data so we can divide accordingly
+n.row <- nrow(df_MP)
+
+#Choose the rows for the traning  the sample 
+set.seed(8369)
+training.rows <- sample(1:n.row, sr*n.row, replace=FALSE)
+
+#Assign a part of data to the training sample
+train_MP <- subset(df_MP[training.rows,])
+
+# Assign the rest to the data to Test Sample
+test_MP <- subset(df_MP[-c(training.rows),])
+
+summary(df_MP)
+summary(test_MP)
+summary(train_MP)
+```
+2 Exploratory Analysis
+1. Correlations: Create correlations (as demonstrated) and comment on
+what you see. Are there co-linear variables? 
+
+```{r}
+
+pairs(df_MP, pch=10)
+
+#used hetcor() function so we do not need to remove the categorical variables
+Corr_MP <- hetcor(df_MP)
+
+round(Corr_MP$correlations, 2)
+
+```
+PG_MP has a positive weak correlation with CS_MP (0.08), ML_MP (0.06),HZ_MP (0.08), and a negative weak correlation with OT_MP (-0.50), and no significant correlation with other variables.
+
+Model Development As demonstrated in class, create two logistic regression models. 
+1. A full model using all of the variables
+
+```{r}
+
+#Full model with all the variables
+glm_MP = glm(OT_MP ~ .    ,
+              family="binomial", data=train_MP, na.action=na.omit)
+
+summary(glm_MP)
+
+```
+
+This is a logistic regression model that was fitted using the glm
+function, with an outcome variable OT_MP and predictor variables VN_MP,
+PG_MP, CS_MP, ML_MP, DM_MP, HZ_MP, CR_MP, and WT_MP.
+
+(1) Fisher iterations The number of Fisher Scoring iterations used in
+    estimating the coefficients is 5 which means the model is
+    converging.
+(2) AIC The AIC value is 392.36, which is a measure of the model's
+    overall fit, with low value indicating a better fit.
+(3) Residual Deviance The residual deviance, which measures the goodness
+    of fit of the model, is 387.31, and the null deviance, which
+    measures the goodness of fit of a model with only an intercept term,
+    is 538.13.
+(4) It is symmetric as the median is close to zero
+(5) z-values PG_MP, ML_MP, HZ_MP, DM_MP, CR_MP, and WT_MP have p-values
+    less than 0.05 and VN_MP, CS_MP have p-values greater than 0.05 so 6
+    out
+(6) Parameter Co-Efficients
+
+
+
+2.  An additional model using backward selection.
+
+```{r}
+
+#Backward model with all the variables
+backward_model_MP <- step(glm_MP, direction = "backward")
+summary(backward_model_MP)
+
+```
+
+(1) Fisher iterations The number of Fisher Scoring iterations used in
+    estimating the coefficients is 5 which means the model is
+    converging. 
+(2) AIC The AIC value is 388.47, which is a measure of the model's
+    overall fit, with low value indicating a better fit. 
+(3) Residual Deviance The residual deviance, which measures the goodness
+    of fit of the model, is 392.36.86, and the null deviance, which
+    measures the goodness of fit of a model with only an intercept term,
+    is 538.13. 
+(4) It is symmetric as the median is close to zero 
+(5) All of these coefficients are statistically significant at the 0.05 significance level, as the p-values                           (Pr(>|z|)) is smaller than 0.05.
+    5 out of 5 variables passes the z-test 
+(6) Parameter Co-Efficients
+
+
+3.  As demonstrated in class, analyze the output for any significantly
+    influential datapoints. Are there any?
+
+```{r}
+
+plot(glm_MP, which=4, id.n=6)
+g <- residuals(glm_MP)
+  
+plot(g, pch=20)
+
+par(mfrow = c(2, 2)) 
+plot(glm_MP)  
+par(mfrow = c(1, 1)) 
+
+```
+- After looking at the Residual vs fitted graph we can say that It is Homoscedastic as the variance is constant throughout, 
+- Has no auto correlation as data is not scattered much
+- After looking at the Normal Q-Q plot we can say that It is normally distributed
+- After viewing Residual vs Leverage graph we can say that there is no specific influential or leverage point
+- Looking at the cook's distance graph we can say that there is no values above 0.05
+- No any significantly influential datapoints are found.
+
+
+```{r}
+
+plot(backward_model_MP, which=4, id.n=6)
+b <- residuals(backward_model_MP)
+
+  
+plot(b, pch=20)
+
+par(mfrow = c(2, 2))  
+plot(backward_model_MP)  
+par(mfrow = c(1, 1)) 
+
+```
+
+- After looking at the Residual vs fitted graph we can say that It is Homoscedastic as the variance is constant throughout, 
+- Has no auto correlation as data is not scattered much
+- After looking at the Normal Q-Q plot we can say that It is normally distributed
+- After viewing Residual vs Leverage graph we can say that there is no specific influential or leverage point
+- Looking at the cook's distance graph we can say that there is no values above 0.05
+- No any significantly influential datapoints are found.
+
+
+4.  Based on your preceding analysis, recommend which model should be
+    selected and explain why.
+
+Backward model is recommended and the reason for that is 
+- Its AIC value is 392.36 which is less than full model's AIC of 388.47 
+- All the variables passes the Z-test for backward model
+- The backward variable selection model includes only 5 variables (PG_MP, ML_MP, HZ_MP, CR_MP, and WT_MP), while the full model     includes 8 variables (VN_MP, PG_MP, CS_MP, ML_MP, DM_MP, HZ_MP, CR_MP, and WT_MP). This indicates that the backward variable      selection model is more prefferable as it includes fewer variables, making it potentially more interpretable and easier to        implement in practice.
+- Its residual deviance is 388.86 which is just higher than forward model
+- However, In conclusion, the model obtained from backward variable selection appears to have better model fit, and                 interpretability compared to the full model.
+
+
+
+Logistic Regression -- stepwise 
+1. As above, use the step option in the glm function to fit the model (using stepwise selection).
+
+- We are fitting a binary logistic regression model (glm) using the "train_MP" dataset with "OT_MP" as the outcome variable and     using all available predictors (indicated by "~ .") in the model. 
+
+```{r}
+
+timestart_MP <- Sys.time()
+  
+glm_model_MP = glm(OT_MP ~ .    ,
+              family="binomial", data=train_MP, na.action=na.omit)
+  
+stp_glm_MP <- step(glm_model_MP, trace=FALSE)
+  
+#Time ends  
+timeend_MP <- Sys.time()
+  
+GLM_Time_MP <- timeend_MP - timestart_MP
+  
+summary(stp_glm_MP)
+  
+
+```
+
+
+```{r}
+
+#Creating a Confusion Matrix for train dataset
+result_glm_MP <- predict(stp_glm_MP, newdata=train_MP, type="response")   
+class_glm_MP <- ifelse(result_glm_MP > 0.5,"Y","N")           
+step_train_MP <- table(train_MP$OT_MP, class_glm_MP,
+                dnn=list("Actual","Predicted") ) 
+step_train_MP
+
+#Creating a Confusion Matrix for test dataset
+result_glm_MP <- predict(stp_glm_MP, newdata=test_MP, type="response")   
+class_glm_MP <- ifelse(result_glm_MP > 0.5,"Y","N")           
+step_test_MP <- table(test_MP$OT_MP, class_glm_MP,
+                dnn=list("Actual","Predicted") ) 
+step_test_MP
+```
+
+Naïve-Bayes Classification 
+1. Use all the variables in the dataset to fit a Naïve-Bayesian classification model. 
+
+```{r, warning=FALSE}
+
+#Time start
+timestart_MP <- Sys.time()
+  
+NB_model_MP <- NaiveBayes(OT_MP ~ . ,
+                     data = train_MP, na.action=na.omit)
+#Time ends  
+timeend_MP <- Sys.time()
+  
+NB_Time_MP <- timeend_MP - timestart_MP
+
+```
+
+2. Summarize the results in Confusion Matrices for both train and test sets.
+
+```{r, warning=FALSE}
+
+#Creating a Confusion Matrix for train dataset
+NB_train_MP <- predict(NB_model_MP,newdata=train_MP)
+Class_train_NB <- table(Actual=train_MP$OT_MP, Predicted=NB_train_MP$class)
+Class_train_NB
+
+
+#Creating a Confusion Matrix for test dataset
+NB_test_MP <- predict(NB_model_MP,newdata=test_MP)
+Class_test_NB <- table(Actual=test_MP$OT_MP, Predicted=NB_test_MP$class)
+Class_test_NB
+
+
+```
+
+3. As demonstrated in class, calculate the time (in seconds) it took to fit the model and include this in your summary.
+
+```{r}
+
+#Time difference
+NB_Time_MP
+
+```
+
+Recursive Partitioning Analysis 
+1. Use all the variables in the dataset to fit an recursive partitioning classification model. 
+
+```{r}
+
+#Time starts
+timestart_MP <- Sys.time()
+
+RP_model_MP <- ctree(OT_MP ~ ., data=train_MP)
+
+#Time ends
+timeend_MP <- Sys.time()
+
+RP_Time_MP <- timeend_MP - timestart_MP
+
+#Recursive partitioning classification model
+plot(RP_model_MP, gp=gpar(fontsize=7))
+
+```
+
+Looking at the Recursive partitioning classification model The root node is PG_MP and it has a condition that >3 or 3 with p<0.001 so if the value is greater than 3 it goes to WT_MP to the right side and if it has =3 then it goes to CR_MP on the left side. Then CR_MP and WT_MP is further divided in two child nodes each with p<0.001. Further ahead the leftmost child of ML_MP seems to be a good fit whereas the rightmost node of CR_MP is the worst fit as it has the lowest among all.
+
+
+2. Summarize the results in Confusion Matrices for both train and test sets. 
+```{r}
+
+#Creating a Confusion Matrix for train dataset
+RP_train_MP <- predict(RP_model_MP, newdata=train_MP)
+Class_train_RP <- table(Actual=train_MP$OT_MP, Predicted=RP_train_MP)
+Class_train_RP
+
+
+#Creating a Confusion Matrix for test dataset
+RP_test_MP <- predict(RP_model_MP, newdata=test_MP)
+Class_test_RP <- table(Actual=test_MP$OT_MP, Predicted=RP_test_MP)
+Class_test_RP
+
+```
+
+3. As demonstrated in class, calculate the time (in seconds) it took to fit the model and include this in your summary.
+
+```{r}
+
+#Time differences
+RP_Time_MP
+
+```
+
+BONUS SECTION This section is bonus marks. There is no need to complete
+this, but successful completion of this section will be worth 3 bonus
+marks. Neural Network
+
+1.  Use all the variables in the dataset to fit a Neural Network
+    classification model. Set the seed to 8430, the size to 3, rang=0.1
+    and maxit=1200.
+
+```{r}
+#Time starts
+timestart_MP <- Sys.time()
+
+set.seed(8430)
+nn_model_MP <- nnet(OT_MP ~ .,
+          data=train_MP,
+          size=3,
+          rang=0.1,
+          maxit=1200,
+          trace=FALSE)
+
+
+#Time ends
+timeend_MP <- Sys.time()
+  
+NN_Time_MP <- timeend_MP - timestart_MP
+
+```
+
+2.  Summarize the results in Confusion Matrices for both train and test sets.
+    
+```{r}
+
+#Creating a Confusion Matrix for train dataset
+NN_train_MP <- predict(nn_model_MP, newdata=train_MP, type="class")
+Class_train_NN <- table(Actual=train_MP$OT_MP, Predicted=NN_train_MP)
+Class_train_NN
+
+
+#Creating a Confusion Matrix for test dataset
+NN_test_MP <- predict(nn_model_MP, newdata=test_MP, type="class")
+Class_test_NN <- table(Actual=test_MP$OT_MP, Predicted=NN_test_MP)
+Class_test_NN
+
+```
+
+3.  As demonstrated in class, calculate the time (in seconds) it took to
+    fit the model and include this in your summary.
+    
+```{r}
+
+#Time differences
+NN_Time_MP
+
+```
+
+Compare All Classifiers For all questions below please provide evidence. 
+1. Which classifier is most accurate? 
+
+```{r}
+Acc_step_MP <- (step_test_MP[1,1] + step_test_MP[2,2])/sum(step_test_MP)
+print(paste("Accuracy of step model:", round(Acc_step_MP,3)))
+
+Acc_NB_MP <- (Class_test_NB[1,1] + Class_test_NB[2,2])/sum(Class_test_NB)
+print(paste("Accuracy of Naive Bayes model:", round(Acc_NB_MP,3)))
+
+Acc_RP_MP <- (Class_test_RP[1,1] + Class_test_RP[2,2])/sum(Class_test_RP)
+print(paste("Accuracy of Recursive Partitioning model:", round(Acc_RP_MP,3)))
+
+Acc_NN_MP <- (Class_test_NN[1,1] + Class_test_NN[2,2])/sum(Class_test_NN)
+print(paste("Accuracy of Neural Network model:", round(Acc_NN_MP,3)))
+```
+Looking at the values above we can see that Naive Bayes Model has the highest Accuracy with 0.745. so, Naive Bayes has the most accuracy of all the models
+
+2. Which classifier seems most consistent (think train and test)? 
+
+```{r}
+
+#Stepwise model 
+Acc_step_MP <- (step_test_MP[1,1] + step_test_MP[2,2])/sum(step_test_MP)
+print(paste("Accuracy of test step model:", round(Acc_step_MP,3)))
+
+Prec_step_MP <- step_test_MP[2,2]/(sum(step_test_MP[,2]))
+print(paste("Precision of test step model:",round(Prec_step_MP,3)))
+
+Sens_step_MP <- step_test_MP[2,2]/(sum(step_test_MP[2,]))
+print(paste("Sensitivity of test step model:",round(Sens_step_MP,3)))
+
+Spec_step_MP <- step_test_MP[1,1]/(step_test_MP[1,1] + step_test_MP[1,2])
+print(paste("Specificity of test step model:",round(Spec_step_MP,3)))
+
+```
+
+```{r}
+
+#Naive Bayes Model
+Acc_NB_MP <- (Class_test_NB[1,1] + Class_test_NB[2,2])/sum(Class_test_NB)
+print(paste("Accuracy of test Naive Bayes model:", round(Acc_NB_MP,3)))
+
+Prec_step_MP <- Class_test_NB[2,2]/(sum(Class_test_NB[,2]))
+print(paste("Precision of test Naive Bayes model:",round(Prec_step_MP,3)))
+
+Sens_step_MP <- Class_test_NB[2,2]/(sum(Class_test_NB[2,]))
+print(paste("Sensitivity of test Naive Bayes model:",round(Sens_step_MP,3)))
+
+Spec_step_MP <- Class_test_NB[1,1]/(Class_test_NB[1,1] + Class_test_NB[1,2])
+print(paste("Specificity of test step model:",round(Spec_step_MP,3)))
+
+```
+
+
+```{r}
+
+#Recursive Partitioning
+Acc_RP_MP <- (Class_test_RP[1,1] + Class_test_RP[2,2])/sum(Class_test_RP)
+print(paste("Accuracy of test Recursive Partitioning model:", round(Acc_RP_MP,3)))
+
+Prec_step_MP <- Class_test_RP[2,2]/(sum(Class_test_RP[,2]))
+print(paste("Precision of test Recursive model:",round(Prec_step_MP,3)))
+
+Sens_step_MP <- Class_test_RP[2,2]/(sum(Class_test_RP[2,]))
+print(paste("Sensitivity of test Recursive model:",round(Sens_step_MP,3)))
+
+Spec_step_MP <- Class_test_RP[1,1]/(Class_test_RP[1,1] + Class_test_RP[1,2])
+print(paste("Specificity of test Recursive model:",round(Spec_step_MP,3)))
+
+```
+
+```{r}
+
+#Neural Networks
+Acc_NN_MP <- (Class_test_NN[1,1] + Class_test_NN[2,2])/sum(Class_test_NN)
+print(paste("Accuracy of test Neural Network model:", round(Acc_NN_MP,3)))
+
+Prec_step_MP <- Class_test_NN[2,2]/(sum(Class_test_NN[,2]))
+print(paste("Precision of test Neural Networks model:",round(Prec_step_MP,3)))
+
+Sens_step_MP <- Class_test_NN[2,2]/(sum(Class_test_NN[2,]))
+print(paste("Sensitivity of test Neural Networks model:",round(Sens_step_MP,3)))
+
+Spec_step_MP <- Class_test_NN[1,1]/(Class_test_NN[1,1] + Class_test_NN[1,2])
+print(paste("Specificity of Neural Networks model:",round(Spec_step_MP,3)))
+
+```
+Among the following models Stepwise model is more consistent then the other models as the values are closest to each other than the other models:-
+[1] "Accuracy of test step model: 0.714"
+[1] "Precision of test step model: 0.75"
+[1] "Sensitivity of test step model: 0.722"
+[1] "Specificity of test step model: 0.705"
+
+
+
+3. Which classifier is most suitable when processing speed is most important? 
+```{r}
+
+GLM_Time_MP
+NB_Time_MP
+RP_Time_MP
+NN_Time_MP
+
+```
+
+Based on the above times of all the models Naive Bayes has the least time among the four.
+
+4. Which classifier minimizes false positives?
+
+```{r, warning=FALSE}
+
+#Creating a Confusion Matrix for Stepwise train dataset
+result_glm_MP <- predict(stp_glm_MP, newdata=train_MP, type="response")   
+class_glm_MP <- ifelse(result_glm_MP > 0.5,"Y","N")           
+step_train_MP <- table(train_MP$OT_MP, class_glm_MP,
+                dnn=list("Actual","Predicted") ) 
+step_train_MP
+
+#Creating a Confusion Matrix for Stepwise test dataset
+result_glm_MP <- predict(stp_glm_MP, newdata=test_MP, type="response")   
+class_glm_MP <- ifelse(result_glm_MP > 0.5,"Y","N")           
+step_test_MP <- table(test_MP$OT_MP, class_glm_MP,
+                dnn=list("Actual","Predicted") ) 
+step_test_MP
+
+#Creating a Confusion Matrix for Naive Bayes train dataset
+NB_train_MP <- predict(NB_model_MP,newdata=train_MP)
+Class_train_NB <- table(Actual=train_MP$OT_MP, Predicted=NB_train_MP$class)
+Class_train_NB
+
+
+#Creating a Confusion Matrix for Naive Bayes test dataset
+NB_test_MP <- predict(NB_model_MP,newdata=test_MP)
+Class_test_NB <- table(Actual=test_MP$OT_MP, Predicted=NB_test_MP$class)
+Class_test_NB
+
+#Creating a Confusion Matrix for Neural Network train dataset
+NN_train_MP <- predict(nn_model_MP, newdata=train_MP, type="class")
+Class_train_NN <- table(Actual=train_MP$OT_MP, Predicted=NN_train_MP)
+Class_train_NN
+
+
+#Creating a Confusion Matrix for Neural Network test dataset
+NN_test_MP <- predict(nn_model_MP, newdata=test_MP, type="class")
+Class_test_NN <- table(Actual=test_MP$OT_MP, Predicted=NN_test_MP)
+Class_test_NN
+
+
+#Creating a Confusion Matrix for Recursive partitioning train dataset
+RP_train_MP <- predict(RP_model_MP, newdata=train_MP)
+Class_train_RP <- table(Actual=train_MP$OT_MP, Predicted=RP_train_MP)
+Class_train_RP
+
+
+#Creating a Confusion Matrix for Recursive partitioning test dataset
+RP_test_MP <- predict(RP_model_MP, newdata=test_MP)
+Class_test_RP <- table(Actual=test_MP$OT_MP, Predicted=RP_test_MP)
+Class_test_RP
+
+```
+- looking at the confusion matrix  we can conclude that the Naive-Bayes Classification classifier minimizes false positives. In     the training set, it has the lowest number of false positives compared to other classifiers. 
+- Similarly, in the test set, Naive-Bayes Classification has the lowest number of false positives compared to other                 classifiers. 
+- Therefore, Naive-Bayes Classification is the classifier that minimizes false positives.
+
+
+
+5. In your opinion, classifier is best overall?
+
+In my Opinion Naive Bayes is the best classifier as 
+- It has the least run time among all the models.(Time difference of 0.04151201 secs)
+- It has the most Accuracy among all the models with(0.745)
+- It has the highest precision among all the models(0.80).
+- It has the second highest specificity among all the models(0.79)
+- It is the second most consistent among all the models.
+- It is the classifier that minimizes false positives among all the models.
+
+Looking at the above points in my opinion Naive Bayes is the best classifier for predicting on-time delivery by the delivery method and product group so in our case Naive Bayes is the best. but different scenarios require different set of models with different requirements.

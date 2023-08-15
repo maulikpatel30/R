@@ -1,0 +1,443 @@
+---
+title: "PROG8430-23W-Assign02"
+author: "Maulik Patel"
+date: "2023-02-10"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#This sets the working directory
+knitr::opts_knit$set(root.dir = setwd("C:/Users/mauli/OneDrive/Documents/BDSA/R/Assignment 2"))
+
+```
+This section is for the basic set up.
+It clears all the plots, the console and the workspace.
+It also sets the overall format for numbers.
+
+```{r}
+if(!is.null(dev.list())) dev.off()
+#cat("\014") 
+rm(list=ls())
+options(scipen=12)
+```
+This section loads and attaches all the necessary packages.
+```{r}
+if(!require(pastecs)){install.packages("pastecs")}
+library("pastecs")
+
+if(!require(lattice)){install.packages("lattice")}
+library("lattice")
+
+if(!require(readxl)){install.packages("readxl")}
+library("readxl")
+
+if(!require(ggplot2)){install.packages("ggplot2")}
+library("ggplot2")
+
+if(!require(tinytex)){install.packages("tinytex")}
+library("tinytex")
+
+```
+
+Data Transformation and Preparation
+
+1.  Initial Transformation
+    a.  Rename all variables with your initials appended (just as was done in assignment 1 and 2)
+    
+    ```{r}
+
+#reading the file
+df_MP <- read.table(file = "PROG8430-23W-Assign02.txt", header=TRUE, sep=",")
+
+#transforming it into a Data frame
+df_MP <- as.data.frame(df_MP)
+head(df_MP)
+
+#to check the datatype we used class() function
+class(df_MP)
+
+```
+
+b.  Transform character variables to factor variables.
+
+```{r}
+
+#transforming character variables into factor variables using as.factor() function
+df_MP$Manufacturer <- as.factor(df_MP$Manufacturer)
+df_MP$Server <- as.factor(df_MP$Server)
+
+#we will verify it using class() function here
+class(df_MP$Manufacturer)
+class(df_MP$Server)
+
+```
+
+```{r}
+
+#Renaming all variables in table with my name initials
+colnames(df_MP) <- c("Index_MP", "Manufacturer_MP", "Server_MP", "Conn_MP", 
+                     "RC_MP", "ST_MP", "SMBR_MP", "SMBT_MP", "BR_MP", "BT_MP", 
+                     "UC_MP", "FA_MP")
+
+#after printing the data frame we can see that the names of the columns are updated with my initials
+print(head(df_MP))
+
+
+```
+
+2.  reduce Dimensionality
+    a.  Apply the Missing Value Filter to remove appropriate columns of data.
+    
+```{r}
+
+#using summary() function we can have the overall summary of the data like min, 
+#median, max and so on.
+#using this we can clearly see that there are no NA's or Null values in the data.
+summary(df_MP)
+
+
+```
+b.  Apply the Low Variance Filter to remove appropriate columns of data.
+
+```{r}
+#stat.desc() function gives us the descriptive statistical analysis of our data frame
+#Cloumns Manufacturer and server are factor variables so it will return NA's 
+#when we use stat.desc() function
+stat.desc(df_MP)
+```
+
+```{r}
+
+# Identifying the Low Variance in our data frame
+#using stat.desc we can see that UC_MP has the lowest value of variance with 2.252003e-05, 
+#so using the below command we will drop the column.
+df_MP <- df_MP[-c(11)]
+head(df_MP)
+
+```
+c.  Apply the High Correlation Filter to remove appropriate columns of data.
+
+```{r}
+#Here we created a new variable and dropped columns manufacturer and server 
+#so we can calculate correlation of the data using cor() function.  
+corr_MP <- df_MP[-c(2:3)]
+cor(corr_MP)
+
+```
+```{r}
+#Columns with high correlation needs to be dropped, if not it can create 
+#complexities ahead.
+#Here we dropped columns BR and BT because they were having high correlation 
+#with the columns SMBT and SMBR
+df_MP <- df_MP[-c(9:10)]
+head(df_MP)
+
+```
+
+d.  Drop any variables that do not contribute any useful analytical information at all.
+
+
+```{r}
+#We have deleted the index column because it does not add any value to our data for analytics
+df_MP <- df_MP[-c(1)]
+head(df_MP)
+```
+
+3. Outliers
+  a. Use an appropriate technique demonstrated in class to identify
+     outliers.
+
+
+```{r}
+#appropriate technique demonstrated in class to identify outliers is using the boxplots
+#Below we have plotted boxplots for each and every column to recognize outliers in the data
+
+boxplot(df_MP$Conn_MP, horizontal=TRUE, pch=19, main='Conn_MP', outpch = 25, outbg = "tomato1")
+boxplot(df_MP$RC_MP, horizontal=TRUE, pch=19, main='RC_MP', outpch = 25, outbg = "tomato1")
+boxplot(df_MP$ST_MP, horizontal=TRUE, pch=19, main='ST_MP', outpch = 25, outbg = "tomato1")
+boxplot(df_MP$SMBR_MP, horizontal=TRUE, pch=19, main='SMBR_MP', outpch = 25, outbg = "tomato1")
+boxplot(df_MP$SMBT_MP, horizontal=TRUE, pch=19, main='SMBT_MP', outpch = 25, outbg = "tomato1")
+boxplot(df_MP$FA_MP, horizontal=TRUE, pch=19, main='FA_MP', outpch = 25, outbg = "tomato1")
+
+
+#For more detailed view of the plots we will adjust the 
+#Inter Quartile Range of the plots using range() function
+
+boxplot(df_MP$RC_MP, 
+        horizontal=TRUE, 
+        pch=19, 
+        main='Adjusted IQR for RC_MP', 
+        range=0.50, 
+        outpch = 25, 
+        outbg = "tomato1")
+
+```
+
+```{r}
+
+#Density plots for variables
+
+densityplot( ~ df_MP$Conn_MP, 
+             pch=4, 
+             main='Density plot for Connections Made', 
+             xlab='Connections Made')
+
+densityplot( ~ df_MP$RC_MP, 
+             pch=4, 
+             main='Density plot for Reconnections Made', 
+             xlab='Reconnections Made')
+
+densityplot( ~ df_MP$ST_MP, 
+             pch=4, 
+             main='Density plot forSession Timed Out', 
+             xlab='Session Timed Out')
+
+densityplot( ~ df_MP$SMBR_MP, 
+             pch=4, 
+             main='Density plot for Server Message Blocks Received', 
+             xlab='Server Message Blocks Received')
+
+densityplot( ~ df_MP$SMBT_MP, 
+             pch=4, 
+             main='Density plot for Server Message Blocks Transmitted', 
+             xlab='Server Message Blocks Transmitted')
+
+densityplot( ~ df_MP$FA_MP, 
+             pch=4, 
+             main='Density plot for Files Accessed', 
+             xlab='Files Accessed')
+
+
+```
+```{r}
+#In the below code we removed two outliers for the Reconnections Made variable
+densityplot( ~ df_MP$RC_MP, 
+             pch=4, 
+             xlab="Reconnections Made", 
+             main="Density plot for Reconnections Made")
+
+#created a new variable rc_MP and stored the values less than 0 and then 
+#we dropped the values less than 0 which were the outliers
+rc_MP <- which(df_MP$RC_MP < 0)
+df_MP <- df_MP[-c(rc_MP),]
+
+#This is an updated density plot in which we have data without the outliers
+densityplot( ~ df_MP$RC_MP, 
+             pch=4, 
+             xlab="Reconnections Made", 
+             main="Outliers Removed from Reconnections Made")
+
+```
+
+```{r}
+#removing outliers for variable SMBT
+densityplot( ~ df_MP$SMBT_MP, 
+             pch=4, 
+             main='Density plot for SMBT', 
+             xlab='Server Message Blocks Transmitted')
+
+#used min for the minimum row value for the outlier
+sc_MP <- which(df_MP$SMBT_MP == min(df_MP$SMBT_MP)) 
+df_MP <- df_MP[-c(sc_MP),]
+
+#removed outliers
+densityplot( ~ df_MP$SMBT_MP, 
+             pch=4, 
+             main='Density plot for SMBT', 
+             xlab='Server Message Blocks Transmitted')
+
+
+```
+```{r}
+
+#Density plots for Files Accessed 
+densityplot( ~ df_MP$FA_MP, 
+             pch=4, 
+             main='Density plot for FA', 
+             xlab='Files Accessed')
+
+#used min to replace the outlier with the mean value
+df_MP$FA_MP <- ifelse(df_MP$FA_MP == min(df_MP$FA_MP),
+                      mean(df_MP$FA_MP),df_MP$FA_MP)
+
+#density plot for Files Accessed variable with outliers removed
+densityplot( ~ df_MP$FA_MP, 
+             pch=4, 
+             main='Density plot for FA', 
+             xlab='Files Accessed')
+```
+
+Organizing Data
+  1. Scatter Plots
+      a. Create a histogram for Server Message Blocks Received.
+      
+```{r}
+
+#histogram for Server Message Blocks Received
+hist(df_MP$SMBR_MP,
+     main = "Histogram for SMBR",
+     xlab = "Server Message Blocks Received",
+     col= "steelblue2"
+     )
+
+```
+b. Create a histogram for Server Message Blocks Transmitted.
+```{r}
+
+#histogram for Server Message Blocks Transmitted
+hist(df_MP$SMBT_MP,
+     main = "Scatter Plot of SMBT",
+     xlab = "Server Message Blocks Transmitted",
+     col= "olivedrab1",
+     )
+
+```
+c. Create a scatter plot showing the relationship between SMBR
+   and SMBT. (note: SMBR should be on the x-axis, SMBT should
+   be the y-axis)
+
+
+```{r}
+
+#Scatter plot of SMBR vs SMBT
+plot(df_MP$SMBR_MP, df_MP$SMBT_MP,
+     main = "Scatter Plot of SMBR and SMBT",
+     xlab = "Server Message Blocks Received",
+     ylab = "Server Message Blocks Transmitted",
+     pch = 20,
+     col= "darkorchid1",
+     )
+
+```
+d. What conclusions, if any, can you draw from the chart?
+
+#Direction and form of the relationship of SMBR and SMBT can be seen from the scatterplot above.
+
+#Direction is positive as the value of both x and y is moving away from zero and it is increasing.
+
+#so a positive correlation between SMBR and SMBT is observed
+
+#as the values of both x and y are positive we can see a linear form of relationship between SMBR and SMBT.
+
+e. Calculate a correlation coefficient between these two
+variables. Why did you choose the correlation coefficient you
+did? What conclusion you draw from it?
+
+```{r}
+
+cor(df_MP$SMBR_MP, df_MP$SMBT_MP, method = c("pearson"))
+
+#we used pearson method to calculate correlation coefficient between SMBR and SMBT
+
+#Using correlation function we can find out the strength of the relationship of SMBR and SMBT
+#there is a strong linear relationship between SMBR and SMBT
+
+#Reason for choosing Pearson method is because our both the variables SMBR and SMBT 
+#are normally distributed(bell-shaped) as we can observe it in the histogram above, 
+#so pearson is the best fit for such type of variables where the data is normally 
+#distributed and provides a more complete description of the correlation of 
+#association of the two variables. 
+
+#0.762 shows that there is a strong linear relationship between SMBR and SMBT
+
+```
+
+Inference 
+  1. Normality 
+    a. Create a QQ Normal plot of for Sessions Timed Out. 
+     
+```{r}
+
+#Here qqnorm function creates a Normal Q-Q plot for Session Timed Out variable
+qqnorm(df_MP$ST_MP, main = "Sessions Timed Out", pch=17, col='seagreen1')
+
+#qqline function is used to draw a line through Q-Q plot to make the linear 
+#relationship clearly visible
+qqline(df_MP$ST_MP)
+
+
+```
+
+b. Conduct a statistical test for normality on Sessions Timed Out.
+
+```{r}
+#we have conducted shapiro-wilk normality test to check whether the variable 
+#session timed out is normally distributed or not.
+#used sample function because shapiro test can only take 3 to 5000 rows for the test
+shapiro.test(sample(df_MP$ST_MP, 5000))
+
+```
+
+c. Is Sessions Times Out normally distributed? What led you to this conclusion?
+#No, the session timed out is not normally distributed.
+#The p-value is less than 0.05 which states that it is an alternative hypothesis.
+
+
+2. Statistically Significant Differences
+  a. Compare Sessions Times Out between the two major
+     Manufacturers in your data set using a suitable hypothesis
+     test.
+     
+```{r}
+
+shapiro.test(sample(df_MP$ST_MP, 5000))
+#Performing shapiro-wilk test to get the p-value so we can decide the type of hypothesis
+
+wilcox.test(df_MP$ST_MP ~ df_MP$Manufacturer_MP, data = df_MP, exact = FALSE)
+#We will use wilcoxon test for comparing because from the above shapiro test 
+#we get the p-value=0.00000000000000022 which is less than 0.05 so we will assume 
+#it is not normally distributed.
+
+```
+b. Explain why you chose the test you did.
+#The data is not normally distributed so that is why we will apply wilcoxon test
+
+c. Do you have strong evidence that Sessions Times Out are
+   different between Manufacturers?
+#The value of P=0.00000000000000022 here is the strong evidence that the data 
+#is in alternative hypothesis so yes, we can conclude that the sessions times 
+#out are different between manufacturers
+
+
+3. Multiple Statistical Differences
+  a. Determine if Files Accessed varies by Server using ANOVA (statistical) 
+     and a sequence of boxplots (graphical).
+```{r}
+#boxplot for Files Accessed and Server variables
+boxplot(FA_MP ~ Server_MP, data=df_MP,
+        main="Files Accessed using different server",
+        range=0)
+
+#we have done ANOVA test which is done to compare multiple means
+
+#Here we are using one-way ANOVA test because we only have two variables FA and Server
+
+#one-way ANOVA
+summary(aov(FA_MP ~ Server_MP, data=df_MP))
+print(" ")
+
+ano_MP <- aov(FA_MP~Server_MP, data=df_MP)
+summary(ano_MP)
+
+#so, files accessed using different servers varies from server to server
+```
+  b. Determine if Connections Made varies by Server using ANOVA 
+     and a sequence of boxplots.
+```{r}
+#boxplot for Connection and Server variables
+boxplot(Conn_MP ~ Server_MP, data=df_MP,
+        main="Connection made with servers",
+        range=0)
+
+#one-way ANOVA test
+summary(aov(Conn_MP ~ Server_MP, data=df_MP))
+print(" ")
+ano2_MP <- aov(Conn_MP~Server_MP, data=df_MP)
+summary(ano2_MP)
+
+#From the output we conclude that Connections made from all the servers are equal
+
+```

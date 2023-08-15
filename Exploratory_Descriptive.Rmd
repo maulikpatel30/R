@@ -1,0 +1,342 @@
+---
+title: "PROG8430-Assignment_1"
+author: "Maulik Patel"
+date: "02/02/2023"
+output: pdf_document
+---
+
+```{r}
+
+knitr::opts_chunk$set(echo = TRUE)
+#This sets the working directory
+knitr::opts_knit$set(root.dir = setwd("C:/Users/mauli/OneDrive/Documents/BDSA/R"))
+
+```
+
+This section is for the basic set up.
+It clears all the plots, the console and the workspace.
+It also sets the overall format for numbers.
+
+```{r}
+if(!is.null(dev.list())) dev.off()
+#cat("\014") 
+rm(list=ls())
+options(scipen=9)
+```
+This section loads and attaches all the necessary packages.
+
+```{r}
+#Load packages
+#For Excel
+if(!require(readxl)){install.packages("readxl")}
+library("readxl")
+
+if(!require(tinytex)){install.packages("tinytex")}
+library("tinytex")
+```
+
+Question 1
+
+1.You are working Streaming Service. The following statement is made by your 
+  manager. Based on the examples and discussion in Lecture 1, transform it in 
+  to a question that can be answered with data analytics. Make sure you 
+  discuss the logic and reasoning you use to transform it and what questions 
+  you might ask. (NOTE – This question is worth 4 marks, so answer appropriately).
+  
+  We have more customers than before, but our new customers are streaming 
+  less than before.
+  
+##Answer
+  
+  "Are our Marketing Skills more efficient than our content quality?"
+  
+  The reason and logic behind it is that more and more people are subscribing, as the streaming service have more           customers than they had before and that could be due to better strategic offers, deals, and discounts by the              marketing team.
+  
+  On the other hand, the reason behind declining in the streaming rate is due to the content quality. They are not          producing  or uploading such good quality content that interests the customers.
+  
+  Streaming services might have cut the cost in producing or purchasing content giving all that capital to marketing        team for capturing the market.
+  
+  Streaming services might have more user friendly interface than the other streaming services in the market could          be the reason customers are subscribing more and more.
+  
+  
+##Questions I might ask are:
+
+  Is it really because of the marketing strategy or is it because there is only one streaming service in the market?
+   
+
+
+2.Consider the following three arrays of data. Each array is data for one file 
+  sharing site. The numbers in the array represent the number of downloads 
+  for each site in a day (for example, Site A had 28 downloads on the first day, 
+  29 on the second and so on).
+  Site A: (28 29 31 28 30 30 30 32 28 33)
+  Site B: (23 19 23 33 32 27 20 24 42 32)
+  Site C: (27 26 28 25 27 27 30 30 28 26)
+  Based on the data provided, and using the skills learned in this class, answer 
+  the following questions. Make sure to provide evidence for your answers.
+
+a) Which site has the least downloads on a typical day?
+
+```{r}
+
+a <- c(28, 29, 31, 28, 30, 30, 30, 32, 28, 33)
+b <- c(23, 19, 23, 33, 32, 27, 20, 24, 42, 32)
+c <- c(27, 26, 28, 25, 27, 27, 30, 30, 28, 26)
+
+mean(a)
+mean(b)
+mean(c)
+
+```
+According to the averages above, Site C has the least mean which is 27.4 and it 
+states that C has the least downloads on a typical day.
+
+
+b) Which site has the most inconsistent usage?
+```{r}
+
+a <- c(28, 29, 31, 28, 30, 30, 30, 32, 28, 33)
+b <- c(23, 19, 23, 33, 32, 27, 20, 24, 42, 32)
+c <- c(27, 26, 28, 25, 27, 27, 30, 30, 28, 26)
+
+mean(a)
+mean(b)
+mean(c)
+
+sd(a)
+sd(b)
+sd(c)
+
+#Site B with SD = 7.168604 has the most inconsistent usage as it has the most standard deviation among the three and as we have discussed in the class that Low standard deviation means the data is compact around the mean, and high standard deviation shows that the data is more spread out. 
+```
+
+
+Basic Manipulation
+
+1. Read in the text file and change to a data frame
+```{r}
+
+MP <- read.table("PROG8430-23W-Assign01.txt", sep=",", header=TRUE)
+
+first <- data.frame(MP)
+class(first)
+
+```
+2. Append your initials to all variables in the data frame (Note – you will need to do this in all your subsequent assignments).
+```{r}
+
+#using colnames function to append initials to all variables in data frame
+colnames(first) <- c("Manufacturer_MP", "Server_MP", "DC_MP", "SMBR_MP", "SMBT_MP", "Conn_MP")
+print(head(first))
+```
+
+```{r}
+
+```
+3. Change each character variable to a factor variable
+```{r}
+
+#character variable to factor variable
+first[sapply(first, is.character)] <- lapply(first[sapply(first, is.character)], as.factor)
+
+#using class function which shows the type of datatype
+class(first$DC_MP)
+class(first$Server_MP)
+class(first$Manufacturer_MP)
+
+```
+4. What are the dimensions of the data set (rows and columns)
+
+```{r}
+
+#dimensions of the data set
+dim(first)
+
+```
+Summarizing Data
+
+1. Means and Standard Deviations
+  a. Calculate the mean and standard deviation for Server Message Blocks Received.
+```{r}
+
+#mean and standard deviation for SMBR
+mean(first$SMBR_MP)
+sd(first$SMBR_MP)
+
+```
+b. Use the results above to calculate the coefficient of variation (rounded to 3 decimal places).
+```{r}
+
+#Coefficient of variance of SMBR
+cvR_MP <- round((sd(first$SMBR_MP)/mean(first$SMBR_MP)), 3)
+print(cvR_MP)
+
+```
+c. Calculate the mean and standard deviation for Server Message Blocks Transmitted.
+```{r}
+
+#mean and standard deviation for SMBT
+mean(first$SMBT_MP)
+sd(first$SMBT_MP)
+
+```
+d. Also calculate the coefficient of variation (rounded to 3 decimal places).
+```{r}
+
+#Coefficient of variance of SMBT
+cvT_MP <- round((sd(first$SMBT_MP)/mean(first$SMBT_MP)), 3)
+print(cvT_MP)
+
+```
+e. Does the SMBT or SMBR have more variation?
+
+#SMBT has more variation because SMBT has more variation then SMBR.
+
+  
+2. Calculate the 45th percentile of the number of Server Message Blocks Transmitted. 
+   This calculation should be rounded to the nearest whole number (no decimal places).
+```{r}
+
+#45th percentile of the number of SMBT
+quantile(first$SMBT_MP, c(.45)) 
+
+```
+Organizing Data
+
+1. Summary Table
+  a. Create a table showing the average Server Message Blocks 
+     Transmitted by Manufacturer. This should be rounded to two 
+     decimal places.
+```{r}
+
+#table showing the average Server Message Blocks Transmitted by Manufacturer
+avg_MP <- aggregate (first$SMBT_MP, by=list(first$Manufacturer_MP), FUN=mean)
+colnames(avg_MP) <- c("Manufacturer_MP", "Average_SMBT")
+print(avg_MP)
+
+```
+1.b. Which Manufacturer’s Servers have, on average, transmitted 
+     the most server message blocks? Which manufacturer is it?
+
+#Lled has the most server message block Transmitted as the average of Lled is more than the other manufacturers.
+
+2. Cross Tabulation
+  a. Create a table counting all Servers by Data Centre.
+```{r}
+
+#table counting all Servers by Data Centre.
+srv_MP <- table(first$Server_MP, first$DC_MP)
+srv_MP
+
+```
+2.b. Change the table to show the percentage of each Server in 
+   each Data Centre .This should be rounded to three decimal 
+   places.
+```{r}
+
+#percentage of each Server in each Data Centre
+round(prop.table(srv_MP, 2), 3)
+
+```
+2.c. What percentage of servers at Elmira are MG9696?
+#percentage of servers at Elmira are MG9696? 
+#0.080 * 100 = 8%
+
+3. Bar Plot 
+  a. Create a bar plot of count of Servers Models.
+```{r}
+
+#bar plot of count of Servers Models.
+count_MP <- table(first$Server_MP)
+barplot(count_MP, 
+        main="Barplot of server counts",
+        xlab="Servers", 
+        ylab ="Number",
+        col="gold"
+        )
+
+```
+3.b. The plot should be:
+      i. Rank ordered by highest count of Server Model.
+      ii. Properly labeled (title, x-axis, etc)
+      iii. The bars should have a different colour than the one 
+           shown in class.
+      
+```{r}
+
+#Rank ordered by highest count of Server Model.
+count_MP <- count_MP[order(count_MP,decreasing = TRUE)]
+barplot(count_MP, 
+        main="Barplot of Server model count",
+        xlab="Model Number",
+        ylab="Count", 
+        col="magenta", 
+        )
+
+```
+
+4. Histogram
+  a. Create a histogram of Server Message Blocks Transmitted.
+  b. The plot should be properly labeled and a unique colour and 
+     have 10 breaks.
+
+```{r}
+
+hist(first$SMBT_MP, 
+     main="Histogram of Server Message Blocks Transmitted", 
+     xlab="SMBT", 
+     ylab="Frequency", 
+     col="seagreen1", 
+     breaks=10)
+
+```
+4.c. Which range of SMBT is the most common?
+# Range of 40000 - 60000 is the most common in SMBT
+
+5. Box plot
+  a. Create a horizontal box plot of number of Connections Made.
+  b. The plot should be properly labeled and a unique colour.
+  c. Based on the box plot, approximately how many servers 
+     made fewer than 6160 connections?
+```{r}
+
+boxplot(first$Conn_MP, 
+        main="Connections Made", 
+        xlab="Parts per Thousand", 
+        ylab="Connections", 
+        horizontal=TRUE, 
+        border="darkorchid", 
+        col="darkorange",
+        las=2
+        )
+
+
+#Servers made fewer than 6160 connections are 25% of 9000 is 2250..
+```
+6. Scatter Plot
+  a. Create a scatter plot comparing Server Message Blocks 
+     Transmitted and Connections Made.
+  b. The plot should be properly labeled with a marker type 
+     different than the one demonstrated in class.
+```{r}
+
+#Scatter Plot of SMBT and Number of Connections Made
+plot(first$SMBT_MP, first$Conn_MP,
+     main = "Scatter Plot of SMBT and Number of Connections Made",
+     xlab = "Server Message Blocks Transmitted",
+     ylab = "Connections Made",
+     pch = 10,
+     col= "firebrick",
+     )
+
+```
+  
+6.c. Does there appear to be an association between budget and 
+     gross sales for movies
+```{r}
+
+Corr_MP <- cor(first$SMBT_MP,first$Conn_MP)
+Corr_MP
+
+```
+#Looking at the coefficient of correlation = 0.6885204 we can say that there is a positive moderate association between budget and gross sales for movies
